@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>互動名片 Demo</title>
+  <style>
+    :root{
+      /* 預設主題色（可在 JS 用按鈕切換） */
+      --bg: #0f172a;          /* 背景 */
+      --card: #111827;        /* 卡片底 */
+      --text: #e5e7eb;        /* 主要文字 */
+      --muted: #9ca3af;       /* 次要文字 */
+      --accent: #60a5fa;      /* 重點色 */
+      --accent-2: #34d399;    /* 第二重點色 */
+      --ring: #93c5fd;        /* 外框/hover */
+      --shadow: rgba(0,0,0,.28);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 10% 10%, #111827 0%, var(--bg) 55%, #0b1226 100%);
+      color:var(--text); display:grid; place-items:center; padding:24px;
+    }
+
+    .card{
+      width:min(680px, 92vw);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--card), #fff 2%), var(--card));
+      border-radius:24px; box-shadow: 0 20px 60px var(--shadow), inset 0 1px 0 rgba(255,255,255,.04);
+      padding:28px; position:relative; overflow:hidden;
+      outline:1px solid rgba(255,255,255,.04);
+    }
+    .glow{
+      position:absolute; inset:auto auto -80px -80px; width:260px; height:260px; filter: blur(60px);
+      background: radial-gradient(circle at 30% 30%, var(--accent) 0, transparent 60%),
+                  radial-gradient(circle at 80% 70%, var(--accent-2) 0, transparent 60%);
+      opacity:.5; pointer-events:none; transform:rotate(15deg);
+    }
+
+    .row{display:flex; gap:24px; align-items:center; flex-wrap:wrap}
+    .avatar{
+      width:96px; height:96px; border-radius:50%;
+      background:linear-gradient(135deg, #1f2937, #0b1226);
+      border:2px solid rgba(255,255,255,.08);
+      display:grid; place-items:center; font-weight:700; font-size:28px; color:var(--accent);
+      box-shadow: inset 0 0 0 6px rgba(255,255,255,.03);
+      user-select:none;
+    }
+    .meta{min-width:220px}
+    .name{font-size:28px; font-weight:800; letter-spacing:0.3px}
+    .title{color:var(--muted); margin-top:4px}
+    .tagline{margin-top:10px; color:var(--text); opacity:.9}
+
+    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px}
+    .btn{
+      appearance:none; border:none; border-radius:12px; padding:10px 14px; font-weight:600; color:#0b1226;
+      background:linear-gradient(180deg, color-mix(in srgb, var(--accent), #fff 24%), var(--accent));
+      cursor:pointer; box-shadow: 0 8px 20px color-mix(in srgb, var(--accent), #000 75%);
+      transition: transform .08s ease, box-shadow .2s ease, filter .2s ease; outline: none;
+    }
+    .btn.secondary{
+      background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2), #fff 24%), var(--accent-2));
+      box-shadow: 0 8px 20px color-mix(in srgb, var(--accent-2), #000 75%);
+    }
+    .btn:active{ transform: translateY(1px) }
+    .btn:focus-visible{ box-shadow: 0 0 0 3px var(--ring), 0 8px 20px color-mix(in srgb, var(--accent), #000 75%) }
+
+    .split{display:grid; grid-template-columns: 1.05fr .95fr; gap:20px; margin-top:22px}
+    @media (max-width:720px){ .split{ grid-template-columns: 1fr } }
+
+    .panel{
+      background:linear-gradient(180deg, color-mix(in srgb, var(--card), #fff 1%), var(--card));
+      border-radius:18px; padding:16px; box-shadow: 0 10px 32px var(--shadow);
+      border:1px solid rgba(255,255,255,.06)
+    }
+    .panel h3{margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted)}
+    .list{display:grid; gap:10px}
+    .item{display:flex; align-items:center; gap:10px}
+    .dot{width:10px; height:10px; border-radius:50%; background: var(--accent)}
+    .item span{color:var(--text)}
+
+    .foot{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:18px}
+    .social{display:flex; gap:10px}
+    .icon-btn{width:38px; height:38px; border-radius:10px; background:#0b1226; border:1px solid rgba(255,255,255,.06); display:grid; place-items:center; cursor:pointer; color:var(--text)}
+    .hint{color:var(--muted); font-size:12px}
+
+    .toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+      background:rgba(17,24,39,.9); color:#fff; padding:10px 14px; border-radius:10px; opacity:0; pointer-events:none;
+      transition: opacity .25s ease}
+    .toast.show{opacity:1}
+
+    /* Logo 區塊（可替換你的個人或品牌Logo） */
+    .logo-box{position:absolute; right:22px; top:22px; width:54px; height:54px; border-radius:14px;
+      display:grid; place-items:center; color:#0b1226;
+      background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2), #fff 24%), var(--accent-2));
+      box-shadow: 0 10px 22px color-mix(in srgb, var(--accent-2), #000 75%);
+      font-weight:800; letter-spacing:.1em; border:1px solid rgba(255,255,255,.12); user-select:none }
+  </style>
+</head>
+<body>
+  <div class="card" role="region" aria-label="互動名片">
+    <div class="glow" aria-hidden="true"></div>
+
+    <!-- Logo：把字改成你的品牌縮寫/圖形 -->
+    <div class="logo-box" title="你的Logo">WG</div>
+
+    <div class="row">
+      <!-- Avatar：自動取名字首字母；或把這整個 div 換成 <img> -->
+      <div id="avatar" class="avatar" aria-hidden="true">W</div>
+
+      <div class="meta">
+        <div id="name" class="name">Wilson Gao</div>
+        <div id="title" class="title">Visual / Product Designer</div>
+        <div id="tagline" class="tagline">I turn ideas into clean, friendly interfaces.</div>
+        <div class="actions">
+          <button id="copyEmail" class="btn">複製 Email</button>
+          <button id="downloadVcf" class="btn secondary">下載名片（VCF）</button>
+          <button id="toggleTheme" class="btn" style="background:linear-gradient(180deg, #fef08a, #facc15); box-shadow: 0 8px 20px rgba(250,204,21,.45)">切換主題</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="panel">
+        <h3>聯絡方式</h3>
+        <div class="list">
+          <div class="item"><div class="dot"></div><span id="email">wilson@example.com</span></div>
+          <div class="item"><div class="dot"></div><span id="phone">+886-912-345-678</span></div>
+          <div class="item"><div class="dot"></div><span id="site">wilson.design</span></div>
+          <div class="item"><div class="dot"></div><span id="location">Taipei, Taiwan</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>擅長領域</h3>
+        <div class="list" id="skillsList"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="hint">點按按鈕試試互動效果（複製 Email / 下載名片 / 切換主題）</div>
+      <div class="social">
+        <button class="icon-btn" id="linkLinkedin" title="LinkedIn" aria-label="LinkedIn">in</button>
+        <button class="icon-btn" id="linkDribbble" title="Dribbble" aria-label="Dribbble">●</button>
+        <button class="icon-btn" id="linkGithub" title="GitHub" aria-label="GitHub">{} </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ==========================
+    // ① 這裡改成你的個人資料（易改區）
+    // ==========================
+    const profile = {
+      name: 'Wilson Gao',
+      title: 'Visual / Product Designer',
+      tagline: 'I turn ideas into clean, friendly interfaces.',
+      email: 'wilson@example.com',
+      phone: '+886-912-345-678',
+      site: 'https://wilson.design',
+      location: 'Taipei, Taiwan',
+      skills: ['UI/UX','Design System','Prototyping','Motion','Branding'],
+      socials: {
+        linkedin: 'https://www.linkedin.com/',
+        dribbble: 'https://dribbble.com/',
+        github: 'https://github.com/'
+      }
+    }
+
+    // ② 主題清單（想換顏色 → 改這裡或新增一組）
+    const themes = [
+      { bg:'#0f172a', card:'#111827', text:'#e5e7eb', muted:'#9ca3af', accent:'#60a5fa', accent2:'#34d399', ring:'#93c5fd' },
+      { bg:'#111827', card:'#0b1226', text:'#f8fafc', muted:'#94a3b8', accent:'#f472b6', accent2:'#a78bfa', ring:'#f9a8d4' },
+      { bg:'#111827', card:'#101010', text:'#ededed', muted:'#a1a1aa', accent:'#f59e0b', accent2:'#10b981', ring:'#fde68a' },
+      { bg:'#0b1226', card:'#0e141f', text:'#e6f1ff', muted:'#9fb1c9', accent:'#22d3ee', accent2:'#60a5fa', ring:'#67e8f9' }
+    ];
+
+    // ==========================
+    // ↓ 以下為互動邏輯（看不懂先不用改）
+    // ==========================
+    const $ = (id)=>document.getElementById(id);
+
+    function initProfile(){
+      $('name').textContent = profile.name;
+      $('title').textContent = profile.title;
+      $('tagline').textContent = profile.tagline;
+      $('email').textContent = profile.email;
+      $('phone').textContent = profile.phone;
+      $('site').textContent = profile.site.replace(/^https?:\/\//,'');
+      $('location').textContent = profile.location;
+
+      // Avatar：取名字首字
+      $('avatar').textContent = (profile.name||' ').trim().charAt(0).toUpperCase();
+
+      // 技能標籤
+      const skillsWrap = $('skillsList');
+      skillsWrap.innerHTML = '';
+      profile.skills.forEach((s)=>{
+        const el = document.createElement('div');
+        el.className = 'item';
+        el.innerHTML = `<div class="dot"></div><span>${s}</span>`;
+        skillsWrap.appendChild(el);
+      });
+
+      // 社群連結
+      $('linkLinkedin').onclick = ()=> window.open(profile.socials.linkedin,'_blank');
+      $('linkDribbble').onclick = ()=> window.open(profile.socials.dribbble,'_blank');
+      $('linkGithub').onclick = ()=> window.open(profile.socials.github,'_blank');
+    }
+
+    function setTheme(t){
+      const r = document.documentElement;
+      r.style.setProperty('--bg', t.bg);
+      r.style.setProperty('--card', t.card);
+      r.style.setProperty('--text', t.text);
+      r.style.setProperty('--muted', t.muted);
+      r.style.setProperty('--accent', t.accent);
+      r.style.setProperty('--accent-2', t.accent2);
+      r.style.setProperty('--ring', t.ring);
+    }
+
+    function toast(msg, ms=1600){
+      const el = $('toast'); el.textContent = msg; el.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.classList.remove('show'), ms);
+    }
+
+    // 複製 Email
+    $('copyEmail').addEventListener('click', async ()=>{
+      try{
+        await navigator.clipboard.writeText(profile.email);
+        toast('Email 已複製');
+      }catch(e){ toast('無法複製，請手動選取'); }
+    });
+
+    // 下載 vCard 名片（.vcf）
+    $('downloadVcf').addEventListener('click', ()=>{
+      const vcf = `BEGIN:VCARD\nVERSION:3.0\nN:${profile.name};;;;\nFN:${profile.name}\nTITLE:${profile.title}\nTEL;TYPE=CELL:${profile.phone}\nEMAIL;TYPE=WORK:${profile.email}\nURL:${profile.site}\nADR;TYPE=WORK:;;;${profile.location};;;;\nEND:VCARD`;
+      const blob = new Blob([vcf], {type:'text/vcard'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${profile.name.replace(/\s+/g,'_')}.vcf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=> URL.revokeObjectURL(url), 1000);
+      toast('已下載 .vcf 名片');
+    });
+
+    // 切換主題
+    let themeIndex = 0;
+    $('toggleTheme').addEventListener('click', ()=>{
+      themeIndex = (themeIndex + 1) % themes.length;
+      setTheme(themes[themeIndex]);
+    });
+
+    // 初始化
+    initProfile();
+    setTheme(themes[0]);
+  </script>
+</body>
+</html>
